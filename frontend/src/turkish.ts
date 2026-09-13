@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 // Display labels only; API values and stored identifiers remain unchanged.
 const labels: Record<string, string> = {
   RECEIPT: 'Giriş', TRANSFER: 'Konum Değişikliği', DISPATCH: 'Çıkış', ADJUSTMENT: 'Düzeltme',
+  OPEN: 'Açık', COMPLETED: 'Tamamlandı',
   ACTIVE: 'Aktif', INACTIVE: 'Pasif', DISPATCHED: 'Sevk Edildi',
   ADMIN: 'Yönetici', OPERATOR: 'Operatör',
   ZONE: 'Bölge', AISLE: 'Koridor', RACK: 'Raf', SHELF: 'Raf Gözü', STAGING: 'Bekleme Alanı',
@@ -10,6 +11,14 @@ const labels: Record<string, string> = {
 export const displayLabel = (value: string) => labels[value] || value;
 
 const errors: Record<string, string> = {
+  'Receiving session not found': 'Mal kabul kaydı bulunamadı.',
+  'Receiving session is completed': 'Mal kabul kaydı tamamlandı; yeni palet eklenemez.',
+  'Use the session receiving location': 'Bu kaydın mal kabul alanını kullanın.',
+  'Choose a staging location in the selected warehouse': 'Seçilen depoda aktif bir bekleme alanı seçin.',
+  'Receiving session changed; refresh before continuing': 'Mal kabul kaydı değişti. Bilgileri yenileyip tekrar deneyin.',
+  'Receive at least one pallet before completing': 'Tamamlamak için en az bir palet alınmalıdır.',
+  'Place the remaining pallets before completing': 'Kuyrukta bekleyen paletler var. Önce yerleştirmeyi tamamlayın.',
+  'Confirm the expected and received pallet count difference': 'Beklenen ve gelen palet sayısı farkını kontrol edip onaylayın.',
   'Sign in with a valid username and password': 'Geçerli bir kullanıcı adı ve şifre ile giriş yapın.',
   'An Admin account is required for this action': 'Bu işlem için yönetici yetkisi gereklidir.',
   'Zones and staging locations must be directly under the warehouse': 'Bölgeler ve bekleme alanları doğrudan depoya bağlı olmalıdır.',
@@ -26,6 +35,7 @@ const errors: Record<string, string> = {
   'Another operation changed this pallet. Refresh before retrying.': 'Başka bir işlem bu paletin bilgilerini değiştirdi. Tekrar denemeden önce yenileyin.',
 };
 const fields: Record<string, string> = {
+  receivingLocationId: 'Mal Kabul Alanı', expectedPalletCount: 'Beklenen Palet Sayısı', deliveryNote: 'İrsaliye No', supplier: 'Tedarikçi', note: 'Not',
   sku: 'Stok kodu (SKU)', name: 'Ad', description: 'Açıklama', code: 'Kod',
   quantity: 'Koli miktarı', productId: 'Ürün', locationId: 'Konum', warehouseId: 'Depo',
   palletId: 'Palet', parentId: 'Üst konum', type: 'Konum türü', version: 'Palet sürümü',

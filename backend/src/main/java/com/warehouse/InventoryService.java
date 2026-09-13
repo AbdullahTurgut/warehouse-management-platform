@@ -21,11 +21,12 @@ public class InventoryService {
     private final Pallets pallets;
     private final Movements movements;
     private final EntityManager em;
+    private final ReceivingSessions sessions;
 
     public InventoryService(Products products, Warehouses warehouses, Locations locations,
-                            Pallets pallets, Movements movements, EntityManager em) {
+                            Pallets pallets, Movements movements, EntityManager em, ReceivingSessions sessions) {
         this.products=products; this.warehouses=warehouses; this.locations=locations;
-        this.pallets=pallets; this.movements=movements; this.em=em;
+        this.pallets=pallets; this.movements=movements; this.em=em; this.sessions=sessions;
     }
 
     static ResponseStatusException invalid(String message) { return new ResponseStatusException(HttpStatus.BAD_REQUEST, message); }
@@ -82,8 +83,9 @@ public class InventoryService {
         return new LocationView(l.id,l.warehouse.id,l.warehouse.name,l.parent==null ? null : l.parent.id,l.code,l.name,l.type,path(l),
             l.active && (l.type==Location.Type.SHELF || l.type==Location.Type.STAGING),l.active);
     }
-    private PalletView palletView(Pallet p) {
-        return new PalletView(p.id,p.code,p.product.id,p.product.sku,p.product.name,p.quantity,locationView(p.location),p.status,p.version,p.createdAt);
+    PalletView palletView(Pallet p) {
+        return new PalletView(p.id,p.code,p.product.id,p.product.sku,p.product.name,p.quantity,locationView(p.location),p.status,p.version,p.createdAt,
+            p.receivingSession==null ? null : p.receivingSession.id, p.receivingSession==null ? null : p.receivingSession.code,p.firstPutAwayAt);
     }
     private MovementView movementView(StockMovement m) {
         return new MovementView(m.id,m.createdAt,m.type,m.pallet.id,m.pallet.code,m.pallet.product.sku,m.pallet.product.name,
@@ -149,11 +151,19 @@ public class InventoryService {
     @Transactional
     public PalletView receive(ReceiptInput input, String actor) {
         uniqueRequest(input.requestId());
+        ReceivingSession session = null;
+        if(input.receivingSessionId()!=null) {
+            session=sessions.lockById(input.receivingSessionId()).orElseThrow(() -> missing("Receiving session"));
+            if(session.status!=ReceivingSession.Status.OPEN) throw invalid("Receiving session is completed");
+            if(!session.receivingLocation.id.equals(input.locationId())) throw invalid("Use the session receiving location");
+        }
         Product product=products.findById(input.productId()).orElseThrow(() -> missing("Product"));
         if(!product.active) throw invalid("Inactive products cannot be received");
         Location loc=destination(input.locationId());
         long sequence=((Number)em.createNativeQuery("select nextval('pallet_code_seq')").getSingleResult()).longValue();
         Pallet p=new Pallet(); p.code="PLT-"+String.format(Locale.ROOT,"%06d",sequence); p.product=product; p.location=loc; p.quantity=input.quantity(); pallets.save(p);
+        p.receivingSession=session;
+        if(loc.type==Location.Type.SHELF) p.firstPutAwayAt=java.time.Instant.now();
         movement(p,StockMovement.Type.RECEIPT,input.quantity(),null,loc,input.requestId(),input.reference(),actor);
         em.flush(); return palletView(p);
     }
@@ -163,6 +173,7 @@ public class InventoryService {
         if(p.location.id.equals(dest.id)) throw invalid("Choose a different destination");
         if(!p.location.warehouse.id.equals(dest.warehouse.id)) throw invalid("Interwarehouse transfers are outside this prototype");
         Location source=p.location; p.location=dest;
+        if(dest.type==Location.Type.SHELF && p.firstPutAwayAt==null) p.firstPutAwayAt=java.time.Instant.now();
         movement(p,StockMovement.Type.TRANSFER,p.quantity,source,dest,input.requestId(),input.reference(),actor);
         em.flush(); return palletView(p);
     }

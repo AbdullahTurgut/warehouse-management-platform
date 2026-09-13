@@ -7,10 +7,13 @@ import type { User } from './types';
 import { ErrorBox, Field, Loading, message, useOnline } from './ui';
 import { DashboardScreen, InventoryScreen, LocationsScreen, MovementsScreen, PalletScreen, ProductsScreen, ReceiveScreen } from './Screens';
 
+import { ReceivingSessionsScreen, ReceivingSessionScreen } from './ReceivingSessions';
+
 const navigation = [
   { path: 'dashboard', label: 'Genel Bakış', Icon: LayoutDashboard, description: 'Deponuzun güncel durumunu tek ekranda görün.' },
   { path: 'inventory', label: 'Stok', Icon: Boxes, description: 'Paletleri, kalan koli miktarlarını ve konumlarını bulun.' },
   { path: 'receive', label: 'Mal Kabul', Icon: ArrowDownToLine, description: 'Gelen paleti kaydedin ve depodaki konumunu belirleyin.' },
+  { path: 'receiving-sessions', label: 'Mal Kabul Kayıtları', Icon: ClipboardList, description: 'Araç kabulünü ve palet yerleştirmeyi tek kayıttan yönetin.' },
   { path: 'movements', label: 'Stok Hareketleri', Icon: ClipboardList, description: 'Tüm giriş, konum değişikliği ve çıkış işlemleri bir arada.' },
   { path: 'products', label: 'Ürünler', Icon: Package, description: 'Deponuzdaki ürünleri yönetin.' },
   { path: 'locations', label: 'Konumlar', Icon: MapPin, description: 'Deponuzu bölgelerden raf gözlerine kadar düzenleyin.' },
@@ -27,15 +30,16 @@ export default function App() {
   if (restoring) return <Loading/>;
   if (!user) return <Login onLogin={value => { clearCredentials(); setSessionError(''); setUser(value); }}/>;
   const page = route.split('?')[0]; const isPallet = /^pallets\/\d+$/.test(page);
-  const current = navigation.find(n => n.path === page) || navigation[0];
+  const isReceivingSession = /^receiving-sessions\/\d+$/.test(page);
+  const current = navigation.find(n => n.path === (isReceivingSession ? 'receiving-sessions' : page)) || navigation[0];
   const shared = { revision, changed };
-  return <div className="app-shell" onInvalidCapture={turkishValidation} onInputCapture={clearValidation} onChangeCapture={clearValidation}><aside className="sidebar"><a href="#/dashboard" className="brand"><span className="brand-icon"><WarehouseIcon size={24}/></span><span>stockroom<small>DEPO YÖNETİMİ</small></span></a><span className="nav-label">ÇALIŞMA ALANI</span><nav>{navigation.map(({ path, label, Icon }) => <a key={path} href={`#/${path}`} className={(page === path || (path === 'inventory' && isPallet)) ? 'selected' : ''}><Icon size={19}/><span>{label}</span></a>)}</nav><div className="sidebar-footer"><div className="avatar">{user.username[0].toUpperCase()}</div><div><strong>{user.username}</strong><small>{displayLabel(user.role)}</small></div><button title="Çıkış Yap" aria-label="Çıkış Yap" className="icon-btn" onClick={async () => { try { await api('/auth/logout', 'POST'); clearCredentials(); setUser(undefined); setNotice(''); setSessionError(''); } catch (e) { setSessionError(message(e)); } }}><LogOut size={18}/></button></div></aside>
+  return <div className="app-shell" onInvalidCapture={turkishValidation} onInputCapture={clearValidation} onChangeCapture={clearValidation}><aside className="sidebar"><a href="#/dashboard" className="brand"><span className="brand-icon"><WarehouseIcon size={24}/></span><span>stockroom<small>DEPO YÖNETİMİ</small></span></a><span className="nav-label">ÇALIŞMA ALANI</span><nav>{navigation.map(({ path, label, Icon }) => <a key={path} href={`#/${path}`} className={(page === path || (path === 'inventory' && isPallet) || (path === 'receiving-sessions' && isReceivingSession)) ? 'selected' : ''}><Icon size={19}/><span>{label}</span></a>)}</nav><div className="sidebar-footer"><div className="avatar">{user.username[0].toUpperCase()}</div><div><strong>{user.username}</strong><small>{displayLabel(user.role)}</small></div><button title="Çıkış Yap" aria-label="Çıkış Yap" className="icon-btn" onClick={async () => { try { await api('/auth/logout', 'POST'); clearCredentials(); setUser(undefined); setNotice(''); setSessionError(''); } catch (e) { setSessionError(message(e)); } }}><LogOut size={18}/></button></div></aside>
     <div className="main-shell"><header className="topbar"><span><span className="status-dot"/> Depo Yönetimi</span><span className="prototype-label">FAZ 1 · PROTOTİP</span></header><main><div className="page-heading"><div><span className="eyebrow">İŞLEMLER / {isPallet ? 'STOK' : current.label.toLocaleUpperCase('tr-TR')}</span><h1>{isPallet ? 'Palet Detayı' : current.label}</h1><p>{isPallet ? 'Kalan stoğu kontrol edin, paleti taşıyın veya stok çıkışı yapın.' : current.description}</p></div><div className="actions"><button className="btn secondary icon-only" aria-label="Bilgileri Yenile" title="Bilgileri Yenile" onClick={() => setRevision(v => v + 1)}><RefreshCw size={17}/></button>{page !== 'receive' && <a href="#/receive" className="btn"><ArrowDownToLine size={18}/>Palet Girişi Yap</a>}</div></div>
     <ErrorBox>{sessionError}</ErrorBox>
     {!online && <div className="error-box"><WifiOff size={18}/>Bağlantı yok. Görüntülenen stok güncel olmayabilir. İşlem kaydetmek için yeniden bağlanın.</div>}
     {notice && <div role="status" className="success-box"><CheckCircle2 size={19}/><span>{notice}</span><button className="icon-btn" aria-label="Bildirimi Kapat" onClick={() => setNotice('')}><X size={17}/></button></div>}
     <div key={route}>
-      {isPallet ? <PalletScreen {...shared} id={Number(page.split('/')[1])}/> : page === 'inventory' ? <InventoryScreen {...shared}/> : page === 'receive' ? <ReceiveScreen {...shared}/> : page === 'products' ? <ProductsScreen {...shared} user={user}/> : page === 'locations' ? <LocationsScreen {...shared} user={user}/> : page === 'movements' ? <MovementsScreen {...shared}/> : <DashboardScreen {...shared}/>}
+      {isReceivingSession ? <ReceivingSessionScreen {...shared} id={Number(page.split('/')[1])}/> : page === 'receiving-sessions' ? <ReceivingSessionsScreen {...shared}/> : isPallet ? <PalletScreen {...shared} id={Number(page.split('/')[1])}/> : page === 'inventory' ? <InventoryScreen {...shared}/> : page === 'receive' ? <ReceiveScreen {...shared}/> : page === 'products' ? <ProductsScreen {...shared} user={user}/> : page === 'locations' ? <LocationsScreen {...shared} user={user}/> : page === 'movements' ? <MovementsScreen {...shared}/> : <DashboardScreen {...shared}/>}
     </div></main><footer className="main-footer">Stockroom · Çevrimiçi Stok İşlemleri<span>Miktarlar tam koli olarak takip edilir.</span></footer></div></div>;
 }
 

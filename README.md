@@ -110,4 +110,18 @@ Frontend production build and backend package build passed. Both servers started
 
 Manually verify browser interaction on desktop and phone first, especially the dispatch confirmation and refreshed balance. No automated E2E or extensive test suites were added.
 
-Prototype limits: fixed in-memory accounts, no account-management UI, no password reset, no correction/reversal workflow, no warehouse/location rename or deletion, no interwarehouse transfer, and no offline writes. Basic authentication is for local demonstration; production security is outside this phase. Native PWA installation and offline caching are not implemented. Phase 2 is planned for RFID-assisted warehouse automation; it has not started. No RFID or other hardware integration is included.
+Prototype limits: fixed in-memory accounts, no account-management UI, no password reset, no correction/reversal workflow, no warehouse/location rename or deletion, no interwarehouse transfer, and no offline writes. Basic authentication is for local demonstration; production security is outside this phase. Native PWA installation and offline caching are not implemented. Milestone 2A.1 is complete. Milestone 2A.2 (labels/scanning) has not started; RFID-assisted automation remains a later pilot. No hardware integration is included.
+
+## Milestone 2A.1 — completed: software-only continuous receiving
+
+Open **Mal Kabul Kayıtları → Mal Kabul Kaydı Aç**. Select warehouse/staging, optional delivery note, supplier, expected pallet count and note. In the opened record, **Kaydet ve Sonraki Palet** stays on the form; **Önceki Paletle Aynı** reuses the previous product/quantity but requires a new save.
+
+**Yerleştirme Kuyruğu** is shared between users and refreshes every 10 seconds. Select a pallet and use the existing transfer dialog. Gelen / Yerleştirilen counters show receiving and placement progress. Only the first transfer to a shelf sets firstPutAwayAt and marks it placed; moving between staging areas keeps it queued. Later movements do not undo first placement progress. Pallet details link back to the receiving session.
+
+- Migration V3 adds ReceivingSession (`receiving_session`) and nullable pallet session/first-placement fields. Existing pallets and standalone receipts remain compatible.
+- API: `GET/POST /api/v1/receiving-sessions`, `GET /api/v1/receiving-sessions/{id}`, `POST /api/v1/receiving-sessions/{id}/complete` with `version` and optional `confirmCountMismatch`.
+- Existing `POST /receipts` accepts optional `receivingSessionId`; its location must be the session's staging location. Existing `/transfers` performs placement; movement types are unchanged.
+- Completion requires at least one received pallet and no active unplaced pallets. Expected/received count differences require explicit confirmation. Pallets fully dispatched before placement are shown separately. Completed records reject new receipts.
+- No session editing/reopening, bulk creation, barcode/QR, camera or RFID is included. The previous-pallet shortcut is local convenience; all received pallets, progress and queue are persisted server-side.
+
+Builds and a short PostgreSQL/API check passed: three receipts, shared queue across Admin/Operator, first placement progression, completion, duplicate rejection, standalone receipt and partial/full dispatch. Browser interaction can be checked with the 3-pallet workflow above using an incognito window or second device for the other operator.

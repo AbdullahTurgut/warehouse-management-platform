@@ -10,6 +10,8 @@ public class Pallet {
     @Column(nullable = false, unique = true, length = 40) public String code;
     @ManyToOne(optional = false) public Product product;
     @ManyToOne public Location location;
+    @ManyToOne public ReceivingSession receivingSession;
+    public Instant firstPutAwayAt;
     @Column(nullable = false) public int quantity;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) public Status status = Status.ACTIVE;
     @Version public long version;

@@ -14,4 +14,11 @@ Full prototype: PostgreSQL inventory, product/location/pallet management, pallet
 Prototype accounts only (no account management UI), online-only operations, one product per pallet, no lots/expiry tracking, no correction/reversal workflow, no interwarehouse transfers. Sessions expire after eight idle hours or backend restart.
 
 ## Next Phase
-Phase 2: RFID-assisted warehouse automation. Phase 2 has not started; no hardware integration is implemented.
+Milestone 2A.2 has not started. RFID-assisted warehouse automation remains a later pilot; no hardware integration is implemented.
+
+## Milestone 2A.1 — Complete
+- ReceivingSession records with delivery/supplier details, expected counts and completion checks.
+- Continuous single-pallet receiving with Kaydet ve Sonraki Palet and Önceki Paletle Aynı (previous product/quantity).
+- Server-backed shared put-away queue, Gelen / Yerleştirilen progress counters and pallet/session links. firstPutAwayAt is set on first shelf placement; staging transfers do not set it and later transfers preserve it.
+- Frontend/backend builds and the three-pallet, two-operator API flow verified.
+- No 2A.2 scanning/labels or later hardware milestones implemented. Next step remains manual desktop/mobile acceptance of 2A.1.

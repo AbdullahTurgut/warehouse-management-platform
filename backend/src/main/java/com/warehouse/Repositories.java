@@ -21,8 +21,17 @@ interface Pallets extends JpaRepository<Pallet, Long>, JpaSpecificationExecutor<
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Pallet p where p.id = :id")
     Optional<Pallet> lockById(@Param("id") Long id);
+    List<Pallet> findByReceivingSessionIdOrderByCreatedAtAscIdAsc(Long sessionId);
+    long countByReceivingSessionId(Long sessionId);
+    long countByReceivingSessionIdAndFirstPutAwayAtIsNotNull(Long sessionId);
+    long countByReceivingSessionIdAndFirstPutAwayAtIsNullAndStatus(Long sessionId, Pallet.Status status);
     long countByStatus(Pallet.Status status);
     @Query("select coalesce(sum(p.quantity), 0) from Pallet p") long totalCartons();
+}
+interface ReceivingSessions extends JpaRepository<ReceivingSession, Long>, JpaSpecificationExecutor<ReceivingSession> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from ReceivingSession s where s.id = :id")
+    Optional<ReceivingSession> lockById(@Param("id") Long id);
 }
 interface Movements extends JpaRepository<StockMovement, Long>, JpaSpecificationExecutor<StockMovement> {
     boolean existsByRequestId(UUID requestId);
