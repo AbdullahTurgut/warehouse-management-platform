@@ -11,6 +11,9 @@ const labels: Record<string, string> = {
 export const displayLabel = (value: string) => labels[value] || value;
 
 const errors: Record<string, string> = {
+  'Scanned pallet not found': 'Palet kodu bulunamadı.',
+  'Scanned location not found': 'Konum kodu bulunamadı.',
+  'Scanned code not found': 'Kod bulunamadı. PLT-… veya LOC-… etiket kodunu kontrol edin.',
   'Receiving session not found': 'Mal kabul kaydı bulunamadı.',
   'Receiving session is completed': 'Mal kabul kaydı tamamlandı; yeni palet eklenemez.',
   'Use the session receiving location': 'Bu kaydın mal kabul alanını kullanın.',

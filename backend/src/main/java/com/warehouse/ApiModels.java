@@ -29,6 +29,7 @@ public class ApiModels {
     public record MovementView(Long id, Instant createdAt, StockMovement.Type type, Long palletId, String palletCode,
                                String sku, String productName, int quantity, int balanceAfter,
                                String sourceLocation, String destinationLocation, String actor, String reference) {}
+    public record ScanView(String type, PalletView pallet, LocationView location) {}
     public record PalletDetail(PalletView pallet, List<MovementView> movements) {}
     public record PageView<T>(List<T> items, long total, int page, int totalPages) {}
     public record SessionInput(@NotNull Long warehouseId, @NotNull Long receivingLocationId,

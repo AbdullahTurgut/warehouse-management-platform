@@ -1,3 +1,4 @@
+import { ScanInput } from './ScanInput';
 import { useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ArrowDownToLine, ArrowRightLeft, ArrowUpFromLine } from 'lucide-react';
@@ -30,11 +31,12 @@ export function ReceiveForm({ onDone }: { onDone: (p: Pallet) => void }) {
   </form>;
 }
 
-export function OperationForm({ pallet, type, onDone, recentDestinationIds = [] }: { pallet: Pallet; type: 'move' | 'dispatch'; onDone: (p: Pallet) => void; recentDestinationIds?: number[] }) {
+export function OperationForm({ pallet, type, onDone, recentDestinationIds = [], scanDestination = false }: { pallet: Pallet; type: 'move' | 'dispatch'; onDone: (p: Pallet) => void; recentDestinationIds?: number[]; scanDestination?: boolean }) {
   const locations = useLoad<Location[]>('/locations'); const online = useOnline();
   const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const [requestId] = useState(operationId);
   const [quantity, setQuantity] = useState('');
   const destinationRef = useRef<HTMLSelectElement>(null);
+  const [destinationId, setDestinationId] = useState('');
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); const form = new FormData(e.currentTarget); setBusy(true); setError('');
     try { onDone(await api<Pallet>(type === 'move' ? '/transfers' : '/dispatches', 'POST', {
@@ -47,19 +49,30 @@ export function OperationForm({ pallet, type, onDone, recentDestinationIds = [] 
   function selectDestination(id: number) {
     const field = destinationRef.current;
     if (!field) return;
-    field.value = String(id); field.setCustomValidity(''); field.focus();
+    setDestinationId(String(id)); field.setCustomValidity(''); field.focus();
   }
   return <form onSubmit={submit} className="form-stack"><ErrorBox>{error || (type === 'move' ? locations.error : '')}</ErrorBox>
-    <div className="operation-summary"><strong>{pallet.code} · {pallet.productName}</strong><span>Mevcut: {number(pallet.quantity)} koli</span><small>{pallet.location?.path}</small></div>
+    <div className="operation-summary"><strong>{pallet.code} · {pallet.productName}</strong><small>SKU: {pallet.sku}</small><span>Mevcut: {number(pallet.quantity)} koli</span><small>{pallet.location?.path}</small></div>
+    {type === 'move' && scanDestination && <ScanInput label="2. Konum Kodunu Okutun veya Yazın" placeholder="LOC-42" disabled={busy} onStart={() => setDestinationId('')} onScan={result => {
+      if (result.type !== 'LOCATION') throw new Error('Konum kodu bekleniyor. Palet yerine LOC-… etiketini okutun.');
+      const l = result.location;
+      if (!l.active) throw new Error('Bu konum aktif değil.');
+      if (!l.selectable) throw new Error('Hedef bir raf gözü veya bekleme alanı olmalıdır.');
+      if (l.warehouseId !== pallet.location?.warehouseId) throw new Error('Palet ve hedef aynı depoda olmalıdır.');
+      if (l.id === pallet.location?.id) throw new Error('Palet zaten bu konumda. Farklı bir hedef seçin.');
+      if (!destinations.some(d => d.id === l.id)) throw new Error('Hedef seçilemedi. Konum listesini yenileyin.');
+      setDestinationId(String(l.id)); destinationRef.current?.setCustomValidity('');
+    }}/>}
     {type === 'move' && recentDestinations.length > 0 && <div className="operation-summary"><span>Son Kullanılan Konumlar</span><div className="actions wrap">{recentDestinations.map(l => <button key={l.id} type="button" className="btn secondary small" disabled={busy || !online} title={l.path} onClick={() => selectDestination(l.id)}><span>{l.id === recentDestinationIds[0] ? <>Önceki Konuma Yerleştir<br/></> : null}{l.code}</span></button>)}</div><small>Konumu seçer. İşlemi kaydetmek için Taşımayı Onayla düğmesine basın.</small></div>}
-    {type === 'move' ? <Field label="Hedef Raf Gözü veya Bekleme Alanı"><select ref={destinationRef} name="locationId" required defaultValue=""><option value="" disabled>Hedef konum seçin</option>{destinations.map(l => <option key={l.id} value={l.id}>{l.path}</option>)}</select></Field> : <>
+    {type === 'move' ? <Field label="Hedef Raf Gözü veya Bekleme Alanı"><select ref={destinationRef} name="locationId" required value={destinationId} onChange={e => setDestinationId(e.target.value)}><option value="" disabled>Hedef konum seçin</option>{destinations.map(l => <option key={l.id} value={l.id}>{l.path}</option>)}</select></Field> : <>
       <Field label="Çıkış Yapılacak Koli Miktarı"><input name="quantity" value={quantity} onChange={e => setQuantity(e.target.value)} type="number" min="1" max={pallet.quantity} step="1" inputMode="numeric" required autoFocus/></Field>
       <button type="button" className="text-button self-start" onClick={e => { const field = e.currentTarget.form?.elements.namedItem('quantity'); if (field instanceof HTMLInputElement) field.setCustomValidity(''); setQuantity(String(pallet.quantity)); }}>Tamamını seç ({number(pallet.quantity)} koli)</button>
       {Number(quantity) > 0 && Number(quantity) <= pallet.quantity && <div className="info-box">{Number(quantity) === pallet.quantity ? 'Tam çıkış: Palet sevk edildi olarak işaretlenecek ve mevcut konumu kaldırılacak.' : `Mevcut konumda ${number(pallet.quantity - Number(quantity))} koli kalacak.`}</div>}
     </>}
+    {type === 'move' && scanDestination && destinationId && <div className="info-box" role="status"><strong>Yerleştirme Onayı</strong><p>{pallet.code} · {pallet.productName} · {pallet.sku} · {number(pallet.quantity)} koli</p><p>{pallet.location?.path} → {destinations.find(l => String(l.id) === destinationId)?.path}</p><p>Fiziksel paleti ve hedefi kontrol edip Taşımayı Onayla düğmesine basın.</p></div>}
     <Field label="Referans (İsteğe Bağlı)"><input name="reference" maxLength={300} placeholder="İşlem nedeni, teslimat veya işlem referansı"/></Field>
     <p className="muted text-sm">{type === 'move' ? 'Tüm koliler birlikte taşınır. Koli miktarı değişmez.' : 'Stok çıkışını kaydetmeden önce fiili koli miktarını kontrol edin.'}</p>
-    <button className={`btn ${type === 'dispatch' ? 'dispatch-button' : ''}`} disabled={busy || !online || (type === 'move' && !destinations.length)}>{type === 'move' ? <ArrowRightLeft size={18}/> : <ArrowUpFromLine size={18}/>} {busy ? 'Kaydediliyor…' : type === 'move' ? 'Taşımayı Onayla' : 'Stok Çıkışını Onayla'}</button>
+    <button className={`btn ${type === 'dispatch' ? 'dispatch-button' : ''}`} disabled={busy || !online || (type === 'move' && (!destinations.length || (scanDestination && !destinationId)))}>{type === 'move' ? <ArrowRightLeft size={18}/> : <ArrowUpFromLine size={18}/>} {busy ? 'Kaydediliyor…' : type === 'move' ? 'Taşımayı Onayla' : 'Stok Çıkışını Onayla'}</button>
   </form>;
 }
 

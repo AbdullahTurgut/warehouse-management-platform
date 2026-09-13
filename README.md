@@ -110,7 +110,7 @@ Frontend production build and backend package build passed. Both servers started
 
 Manually verify browser interaction on desktop and phone first, especially the dispatch confirmation and refreshed balance. No automated E2E or extensive test suites were added.
 
-Prototype limits: fixed in-memory accounts, no account-management UI, no password reset, no correction/reversal workflow, no warehouse/location rename or deletion, no interwarehouse transfer, and no offline writes. Basic authentication is for local demonstration; production security is outside this phase. Native PWA installation and offline caching are not implemented. Milestone 2A.1 is complete. Milestone 2A.2 (labels/scanning) has not started; RFID-assisted automation remains a later pilot. No hardware integration is included.
+Prototype limits: fixed in-memory accounts, no account-management UI, no password reset, no correction/reversal workflow, no warehouse/location rename or deletion, no interwarehouse transfer, and no offline writes. Basic authentication is for local demonstration; production security is outside this phase. Native PWA installation and offline caching are not implemented. Milestone 2A.1 is complete. Milestone 2A.2 adds labels and HID scanning; 2A.3 has not started; RFID-assisted automation remains a later pilot. No hardware integration is included.
 
 ## Milestone 2A.1 — completed: software-only continuous receiving
 
@@ -125,3 +125,13 @@ Open **Mal Kabul Kayıtları → Mal Kabul Kaydı Aç**. Select warehouse/stagin
 - No session editing/reopening, bulk creation, barcode/QR, camera or RFID is included. The previous-pallet shortcut is local convenience; all received pallets, progress and queue are persisted server-side.
 
 Builds and a short PostgreSQL/API check passed: three receipts, shared queue across Admin/Operator, first placement progression, completion, duplicate rejection, standalone receipt and partial/full dispatch. Browser interaction can be checked with the 3-pallet workflow above using an incognito window or second device for the other operator.
+
+## Milestone 2A.2 — labels and HID-assisted put-away
+
+In a receiving record, open **Hızlı Yerleştirme**. Scan/type the exact pallet code + Enter, verify product/SKU/cartons, then scan/type `LOC-<id>` + Enter. Check the summary and press **Taşımayı Onayla**. Success clears the active pallet and focuses the next pallet input. The queue, progress, manual dropdown and recent destinations remain available. A manually selected queue pallet also supports location scanning. Refresh/navigation does not restore an assumed active pallet.
+
+`GET /api/v1/scan-lookup?code=...` is authenticated and read-only, returning `{ type, pallet, location }` for exact `PLT-...` or `LOC-<id>` identities. Unknown codes return 404. Existing `/transfers`, versions and request IDs handle stock changes; no schema migration was added.
+
+**Etiket Yazdır** is available after receiving, on pallet details/received-pallet rows and on selectable locations. Warehouse headings print all currently filtered valid location labels. The preview offers **Yazdır / PDF Kaydet**. QR and Code 128 encode the same identity; reprints fetch current pallet details without writing stock. Printed carton quantities are a snapshot. Allow the label popup, print at actual size, and verify readability on the intended printer/scanner. Libraries: [node-qrcode](https://github.com/soldair/node-qrcode), [JsBarcode](https://github.com/lindell/JsBarcode).
+
+Frontend/backend builds and a short PostgreSQL API check passed (exact lookup, unknown codes without movements, transfer/progress/history, stale version rejection). The marked smoke record is MK-000004 / PLT-000043. Physical scanner/print acceptance remains manual. Configure HID suffix Enter and matching keyboard layout. No camera, RFID, offline scanning or 2A.3 work is included.

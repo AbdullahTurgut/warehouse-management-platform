@@ -126,6 +126,19 @@ public class InventoryService {
         },paging(page));
         return new PageView<>(result.getContent().stream().map(this::movementView).toList(),result.getTotalElements(),result.getNumber(),result.getTotalPages());
     }
+    public ScanView scanLookup(String value) {
+        if (value.matches("PLT-[0-9]+") && value.length() <= 40) {
+            Pallet p = pallets.findByCode(value).orElseThrow(() -> missing("Scanned pallet"));
+            return new ScanView("PALLET", palletView(p), null);
+        }
+        if (value.matches("LOC-[1-9][0-9]*")) {
+            try {
+                Location l = locations.findById(Long.parseLong(value.substring(4))).orElseThrow(() -> missing("Scanned location"));
+                return new ScanView("LOCATION", null, locationView(l));
+            } catch (NumberFormatException e) { throw missing("Scanned location"); }
+        }
+        throw missing("Scanned code");
+    }
     public Dashboard dashboard() {
         return new Dashboard(pallets.countByStatus(Pallet.Status.ACTIVE),pallets.totalCartons(),products.count(),
             movements.findTop8ByOrderByCreatedAtDescIdDesc().stream().map(this::movementView).toList());

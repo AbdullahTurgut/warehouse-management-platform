@@ -14,11 +14,19 @@ Full prototype: PostgreSQL inventory, product/location/pallet management, pallet
 Prototype accounts only (no account management UI), online-only operations, one product per pallet, no lots/expiry tracking, no correction/reversal workflow, no interwarehouse transfers. Sessions expire after eight idle hours or backend restart.
 
 ## Next Phase
-Milestone 2A.2 has not started. RFID-assisted warehouse automation remains a later pilot; no hardware integration is implemented.
+Phase 2A.2 is complete. Phase 2A.3 camera scanning has not started. RFID-assisted warehouse automation remains a later pilot.
 
 ## Milestone 2A.1 — Complete
 - ReceivingSession records with delivery/supplier details, expected counts and completion checks.
 - Continuous single-pallet receiving with Kaydet ve Sonraki Palet and Önceki Paletle Aynı (previous product/quantity).
 - Server-backed shared put-away queue, Gelen / Yerleştirilen progress counters and pallet/session links. firstPutAwayAt is set on first shelf placement; staging transfers do not set it and later transfers preserve it.
 - Frontend/backend builds and the three-pallet, two-operator API flow verified.
-- No 2A.2 scanning/labels or later hardware milestones implemented. Next step remains manual desktop/mobile acceptance of 2A.1.
+- Scanning and labels were outside 2A.1; see the completed 2A.2 checkpoint below.
+
+## Phase 2A.2 — Complete
+- Exact read-only pallet/location scan lookup; no schema changes.
+- HID/manual barcode workflow completed: code + Enter, pallet verification, destination scan, explicit existing transfer confirmation and next-pallet focus.
+- Pallet/location QR + Code 128 label printing completed, including read-only reprinting and filtered location batch printing.
+- Existing manual flow, shared queue, counters and recent destination shortcuts retained.
+- Frontend/backend builds and brief PostgreSQL API verification passed. Physical HID scanner and printer have not yet been validated.
+- Phase 2A.3 camera scanning not started; no RFID integration.

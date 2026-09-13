@@ -18,6 +18,7 @@ interface Locations extends JpaRepository<Location, Long> {
     List<Location> findAllByOrderByCodeAsc();
 }
 interface Pallets extends JpaRepository<Pallet, Long>, JpaSpecificationExecutor<Pallet> {
+    Optional<Pallet> findByCode(String code);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Pallet p where p.id = :id")
     Optional<Pallet> lockById(@Param("id") Long id);

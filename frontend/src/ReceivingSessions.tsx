@@ -1,3 +1,5 @@
+import { LabelButton } from './Labels';
+import { ScanInput } from './ScanInput';
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ArrowLeft, ArrowRight, ArrowRightLeft, CheckCircle2, Plus, RefreshCw } from 'lucide-react';
@@ -46,8 +48,10 @@ function OpenSessionForm({ onDone }: { onDone: (session: ReceivingSession) => vo
 
 export function ReceivingSessionScreen({ id, revision, changed }: Shared & { id: number }) {
   const [data, setData] = useState<ReceivingSessionDetail>(); const [error, setError] = useState('');
-  const [refresh, setRefresh] = useState(0); const [tab, setTab] = useState<'receive' | 'queue' | 'pallets'>('receive');
+  const [refresh, setRefresh] = useState(0); const [tab, setTab] = useState<'receive' | 'queue' | 'pallets' | 'fast'>('receive');
   const [moving, setMoving] = useState<Pallet>(); const [completing, setCompleting] = useState(false);
+  const [fastPallet, setFastPallet] = useState<Pallet>();
+  const [fastSuccess, setFastSuccess] = useState('');
   const [recentDestinationIds, setRecentDestinationIds] = useState<number[]>([]);
   // Preserve the receiving form and its previous-pallet shortcut while refreshing server-backed progress.
   useEffect(() => {
@@ -70,14 +74,28 @@ export function ReceivingSessionScreen({ id, revision, changed }: Shared & { id:
     </section>
     <div className="stats-grid"><article className="stat-card"><span>Gelen</span><strong>{number(s.receivedCount)}{s.expectedPalletCount !== null ? ' / ' + number(s.expectedPalletCount) : ''}</strong></article><article className="stat-card"><span>Yerleştirilen</span><strong>{number(s.putAwayCount)} / {number(s.receivedCount)}</strong></article><article className="stat-card"><span>Bekleyen</span><strong>{number(s.pendingCount)}</strong></article></div>
     {s.dispatchedBeforePutAwayCount > 0 && <div className="info-box mb-5">Rafa yerleştirilmeden tamamen sevk edilen: {number(s.dispatchedBeforePutAwayCount)} palet. Bu paletler yerleştirildi sayılmaz.</div>}
-    <div className="actions wrap mb-5"><button className={'btn ' + (tab === 'receive' ? '' : 'secondary')} onClick={() => setTab('receive')}>Palet Girişi</button><button className={'btn ' + (tab === 'queue' ? '' : 'secondary')} onClick={() => setTab('queue')}>Yerleştirme Kuyruğu ({number(s.pendingCount)})</button><button className={'btn ' + (tab === 'pallets' ? '' : 'secondary')} onClick={() => setTab('pallets')}>Gelen Paletler</button></div>
+    <div className="actions wrap mb-5"><button className={'btn ' + (tab === 'receive' ? '' : 'secondary')} onClick={() => { setFastPallet(undefined); setTab('receive'); }}>Palet Girişi</button><button className={'btn ' + (tab === 'queue' ? '' : 'secondary')} onClick={() => { setFastPallet(undefined); setTab('queue'); }}>Yerleştirme Kuyruğu ({number(s.pendingCount)})</button><button className={'btn ' + (tab === 'pallets' ? '' : 'secondary')} onClick={() => { setFastPallet(undefined); setTab('pallets'); }}>Gelen Paletler</button><button className={'btn ' + (tab === 'fast' ? '' : 'secondary')} onClick={() => setTab('fast')}>Hızlı Yerleştirme</button></div>
     <section className="panel form-panel" hidden={tab !== 'receive'}><div className="panel-heading"><h2>Kesintisiz Palet Girişi</h2></div>{s.status === 'OPEN' ? <SessionReceiptForm session={s} onSaved={p => saved(p.code + ' için ' + number(p.quantity) + ' koli giriş kaydedildi.')}/> : <Empty title="Mal kabul kaydı tamamlandı">Bu kayda yeni palet eklenemez.</Empty>}</section>
-    {tab !== 'receive' && <section className="panel"><div className="panel-heading"><h2>{tab === 'queue' ? 'Yerleştirme Kuyruğu' : 'Gelen Paletler'}</h2></div>
-      {(tab === 'queue' ? data.queue : data.pallets).length === 0 ? <Empty title={tab === 'queue' ? 'Yerleştirilecek palet yok' : 'Henüz palet alınmadı'}/> : (tab === 'queue' ? data.queue : data.pallets).map(p => <article key={p.id} className="location-row"><div><a className="pallet-link" href={'#/pallets/' + p.id}>{p.code}</a><p><strong>{p.productName}</strong> · {p.sku} · {number(p.quantity)} koli</p><p>{p.location?.path || 'Sevk edildi'} · {s.code}</p><small>{p.firstPutAwayAt ? 'İlk yerleştirme: ' + date(p.firstPutAwayAt) : p.status === 'DISPATCHED' ? 'Yerleştirilmeden sevk edildi' : 'Yerleştirme bekliyor'}</small></div>{p.status === 'ACTIVE' && !p.firstPutAwayAt && <button className="btn secondary small" onClick={() => setMoving(p)}><ArrowRightLeft size={15}/>Yerleştir</button>}</article>)}
+    {tab === 'fast' && <section className="panel form-panel"><div className="panel-heading"><h2>Hızlı Yerleştirme</h2></div><div className="form-stack">
+      {fastSuccess && <div className="info-box" role="status">{fastSuccess}</div>}
+      {!fastPallet ? <ScanInput label="1. Palet Kodunu Okutun veya Yazın" placeholder="PLT-000123" onScan={result => {
+        if (result.type !== 'PALLET') throw new Error('Palet kodu bekleniyor. Konum yerine PLT-… etiketini okutun.');
+        const p = result.pallet;
+        if (p.status !== 'ACTIVE' || !p.location || p.quantity <= 0) throw new Error('Bu palet sevk edilmiş veya aktif değil.');
+        if (p.receivingSessionId !== s.id) throw new Error('Bu palet farklı bir mal kabul kaydına ait. Doğru kaydı açın.');
+        if (p.firstPutAwayAt) throw new Error('Bu paletin ilk yerleştirmesi tamamlanmış. Sonraki taşıma için palet detayını açın.');
+        setFastSuccess(''); setFastPallet(p);
+      }}/> : <><button type="button" className="btn secondary" onClick={() => setFastPallet(undefined)}>Paleti Bırak / Yeniden Okut</button><OperationForm key={fastPallet.id} pallet={fastPallet} type="move" scanDestination recentDestinationIds={recentDestinationIds} onDone={p => {
+        if (p.location) { const destinationId = p.location.id; setRecentDestinationIds(ids => [destinationId, ...ids.filter(id => id !== destinationId)].slice(0, 3)); }
+        setFastPallet(undefined); const text = p.code + (p.firstPutAwayAt ? ' rafa yerleştirildi. Sonraki paleti okutun.' : ' bekleme alanına taşındı; kuyrukta kalır. Sonraki paleti okutun.'); setFastSuccess(text); saved(text);
+      }}/></>}
+    </div></section>}
+    {tab !== 'receive' && <section className="panel"><div className="panel-heading"><h2>{(tab === 'queue' || tab === 'fast') ? 'Yerleştirme Kuyruğu' : 'Gelen Paletler'}</h2></div>
+      {((tab === 'queue' || tab === 'fast') ? data.queue : data.pallets).length === 0 ? <Empty title={(tab === 'queue' || tab === 'fast') ? 'Yerleştirilecek palet yok' : 'Henüz palet alınmadı'}/> : ((tab === 'queue' || tab === 'fast') ? data.queue : data.pallets).map(p => <article key={p.id} className="location-row"><div><a className="pallet-link" href={'#/pallets/' + p.id}>{p.code}</a><p><strong>{p.productName}</strong> · {p.sku} · {number(p.quantity)} koli</p><p>{p.location?.path || 'Sevk edildi'} · {s.code}</p><small>{p.firstPutAwayAt ? 'İlk yerleştirme: ' + date(p.firstPutAwayAt) : p.status === 'DISPATCHED' ? 'Yerleştirilmeden sevk edildi' : 'Yerleştirme bekliyor'}</small><p className="mt-2"><LabelButton pallet={p}/></p></div>{p.status === 'ACTIVE' && !p.firstPutAwayAt && <button className="btn secondary small" onClick={() => { setFastPallet(undefined); setMoving(p); }}><ArrowRightLeft size={15}/>Yerleştir</button>}</article>)}
     </section>}
     <p className="refresh-note mb-5">Ortak kuyruk 10 saniyede bir yenilenir. Diğer operatörler aynı kabul kaydını açabilir.</p>
     {s.status === 'OPEN' && <button className="btn" onClick={() => setCompleting(true)}><CheckCircle2 size={17}/>Mal Kabulü Tamamla</button>}
-    {moving && <Modal title={'Paleti Yerleştir · ' + moving.code} onClose={() => { setMoving(undefined); setRefresh(v => v + 1); }}><OperationForm pallet={moving} type="move" recentDestinationIds={recentDestinationIds} onDone={p => { if (p.location) { const destinationId = p.location.id; setRecentDestinationIds(ids => [destinationId, ...ids.filter(id => id !== destinationId)].slice(0, 3)); } setMoving(undefined); setTab('queue'); saved(p.firstPutAwayAt ? p.code + ' rafa yerleştirildi.' : p.code + ' bekleme alanına taşındı; yerleştirme kuyruğunda kalır.'); }}/></Modal>}
+    {moving && <Modal title={'Paleti Yerleştir · ' + moving.code} onClose={() => { setMoving(undefined); setRefresh(v => v + 1); }}><OperationForm pallet={moving} type="move" scanDestination recentDestinationIds={recentDestinationIds} onDone={p => { if (p.location) { const destinationId = p.location.id; setRecentDestinationIds(ids => [destinationId, ...ids.filter(id => id !== destinationId)].slice(0, 3)); } setMoving(undefined); setTab('queue'); saved(p.firstPutAwayAt ? p.code + ' rafa yerleştirildi.' : p.code + ' bekleme alanına taşındı; yerleştirme kuyruğunda kalır.'); }}/></Modal>}
     {completing && <Modal title="Mal Kabulü Tamamla" onClose={() => setCompleting(false)}><CompleteSessionForm session={s} onDone={() => { setCompleting(false); saved(s.code + ' tamamlandı.'); }}/></Modal>}
   </>;
 }
@@ -102,7 +120,7 @@ function SessionReceiptForm({ session, onSaved }: { session: ReceivingSession; o
     setProductId(String(previous.productId)); setQuantity(String(previous.quantity)); productRef.current?.focus();
   }
   return <form ref={formRef} className="form-stack" onSubmit={submit}><ErrorBox>{error || products.error}</ErrorBox>
-    {previous && <div className="operation-summary"><strong>Son alınan palet: <a className="text-button" href={'#/pallets/' + previous.id}>{previous.code}</a></strong><span>{previous.productName} · {number(previous.quantity)} koli</span><button type="button" className="btn secondary" disabled={busy || !online} onClick={repeat}>Önceki Paletle Aynı</button><small>Ürün ve miktarı doldurur. Yeni paleti oluşturmak için kaydetmeniz gerekir.</small></div>}
+    {previous && <div className="operation-summary"><strong>Son alınan palet: <a className="text-button" href={'#/pallets/' + previous.id}>{previous.code}</a></strong><span>{previous.productName} · {number(previous.quantity)} koli</span><button type="button" className="btn secondary" disabled={busy || !online} onClick={repeat}>Önceki Paletle Aynı</button><LabelButton pallet={previous}/><small>Ürün ve miktarı doldurur. Yeni paleti oluşturmak için kaydetmeniz gerekir.</small></div>}
     <fieldset disabled={busy || !online} className="form-stack border-0 p-0 m-0"><Field label="Ürün"><select ref={productRef} required value={productId} onChange={e => setProductId(e.target.value)}><option value="" disabled>Ürün seçin</option>{products.data?.filter(p => p.active).map(p => <option key={p.id} value={p.id}>{p.sku} · {p.name}</option>)}</select></Field>
     <Field label="Koli Miktarı"><input type="number" inputMode="numeric" min="1" max="2147483647" step="1" required value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="Örn. 40"/></Field>
     <p className="muted text-sm">Giriş konumu: {session.receivingLocationCode}. Her kayıt yeni bir palet oluşturur.</p>

@@ -34,6 +34,7 @@ public class InventoryController {
     @GetMapping("/pallets/{id}") public PalletDetail detail(@PathVariable Long id) { return service.detail(id); }
     @GetMapping("/movements") public PageView<MovementView> history(@RequestParam(defaultValue="") String search,
         @RequestParam(required=false) StockMovement.Type type,@RequestParam(defaultValue="0") int page) { return service.history(search,type,page); }
+    @GetMapping("/scan-lookup") public ScanView scanLookup(@RequestParam String code) { return service.scanLookup(code); }
     @GetMapping("/dashboard") public Dashboard dashboard() { return service.dashboard(); }
     @PostMapping("/receipts") public PalletView receive(@Valid @RequestBody ReceiptInput input, Principal principal) { return service.receive(input,principal.getName()); }
     @PostMapping("/transfers") public PalletView transfer(@Valid @RequestBody TransferInput input, Principal principal) { return service.transfer(input,principal.getName()); }
