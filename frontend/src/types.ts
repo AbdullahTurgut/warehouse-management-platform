@@ -1,0 +1,10 @@
+export type User = { username: string; role: 'ADMIN' | 'OPERATOR' };
+export type Product = { id: number; sku: string; name: string; description: string; active: boolean };
+export type Warehouse = { id: number; code: string; name: string };
+export type LocationType = 'ZONE' | 'AISLE' | 'RACK' | 'SHELF' | 'STAGING';
+export type Location = { id: number; warehouseId: number; warehouseName: string; parentId: number | null; code: string; name: string; type: LocationType; path: string; selectable: boolean; active: boolean };
+export type Pallet = { id: number; code: string; productId: number; sku: string; productName: string; quantity: number; location: Location | null; status: 'ACTIVE' | 'DISPATCHED'; version: number; createdAt: string };
+export type Movement = { id: number; createdAt: string; type: 'RECEIPT' | 'TRANSFER' | 'DISPATCH'; palletId: number; palletCode: string; sku: string; productName: string; quantity: number; balanceAfter: number; sourceLocation: string | null; destinationLocation: string | null; actor: string; reference: string };
+export type Detail = { pallet: Pallet; movements: Movement[] };
+export type Page<T> = { items: T[]; total: number; page: number; totalPages: number };
+export type Dashboard = { activePallets: number; totalCartons: number; productCount: number; recentMovements: Movement[] };

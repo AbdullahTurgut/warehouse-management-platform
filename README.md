@@ -1,0 +1,113 @@
+# Stockroom — warehouse prototype
+
+A Turkish, desktop/mobile warehouse prototype for tracking pallet locations and whole-carton stock from receiving through dispatch. Built with React/TypeScript/Vite, Spring Boot 3.5 / Java 21+, Spring Data JPA and PostgreSQL. Phase 1 and Phase 1.1 are complete.
+
+## Start on Windows
+
+Prerequisites: **JDK 21+**, **Node.js 22.12+**, PowerShell, `curl.exe` and `tar.exe`. Run these commands from the project root in separate terminals.
+
+1. Start the database:
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File scripts/Start-Database.ps1
+   ```
+
+   This downloads portable PostgreSQL 17.6 on first use into `.tools`, initializes persistent data under `.local/postgres-data`, and starts a loopback-only server on port **5432**. It creates database `warehouse` with development username/password `warehouse` / `warehouse`. No Windows service is installed. Start this script as your normal Windows user; use the same user on subsequent runs. The helper is for a local demo only.
+
+2. Build and start the backend:
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File scripts/Start-Backend.ps1
+   ```
+
+   The script uses installed/cached Maven or downloads Maven into `.tools`. API: **http://localhost:8080/api/v1**. To reuse the existing build, add `-SkipBuild`. Flyway creates the schema; demo data is inserted only when both warehouses and products are empty.
+
+3. Start the frontend:
+
+   ```powershell
+   cd frontend
+   npm.cmd install
+   npm.cmd run dev
+   ```
+
+   Open **http://localhost:5173**. For a phone on the same network, use the network URL printed by Vite; allow port 5173 through your local firewall if needed. All API calls use Vite's proxy, including from mobile devices.
+
+**Demo sign-in:** `admin` / `admin123` or `operator` / `operator123`. Admin manages products and locations. Both roles receive, move and dispatch. An HttpOnly session cookie preserves login across page reloads. Passwords are not kept in browser storage. Logout invalidates the session; sessions expire after eight idle hours or backend restart. All documented credentials are intentionally local prototype defaults, not real secrets.
+
+Stop frontend/backend with Ctrl+C. Stop the portable database separately:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/Stop-Database.ps1
+```
+
+## Use an existing PostgreSQL installation
+
+Skip the portable database script. Create a `warehouse` login and a database it owns using your DB manager, then set connection variables below. Example SQL, run as a PostgreSQL administrator with each statement outside a transaction:
+
+```sql
+CREATE ROLE warehouse LOGIN PASSWORD 'warehouse';
+CREATE DATABASE warehouse OWNER warehouse;
+```
+
+Standard backend commands with Maven installed:
+
+```powershell
+mvn -f backend/pom.xml -DskipTests package
+java -jar backend/target/warehouse-0.1.0.jar
+```
+
+## Environment
+
+No variables are required with the demo defaults. Set these in the **backend terminal** before starting it; `.env` files are not loaded automatically.
+
+| Variable | Default |
+|---|---|
+| `DB_URL` | `jdbc:postgresql://localhost:5432/warehouse` |
+| `DB_USER` | `warehouse` |
+| `DB_PASSWORD` | `warehouse` |
+| `PORT` | `8080` |
+| `SEED_DEMO` | `true` |
+| `ADMIN_PASSWORD` | `admin123` |
+| `OPERATOR_PASSWORD` | `operator123` |
+
+Example: `$env:DB_PASSWORD = 'your-local-password'`. If changing backend `PORT`, update the proxy target in `frontend/vite.config.ts`. The portable database script intentionally uses fixed local demo settings.
+
+## Working features
+
+- Product creation, editing, active status and search.
+- Warehouse and Zone → Aisle → Rack → Shelf creation; receiving/dispatch staging locations directly under the warehouse.
+- Receipt with readable generated pallet IDs, whole-carton quantities and optional references.
+- Searchable, paginated inventory with status/location filters and pallet detail.
+- Full-pallet relocation within one warehouse, partial/full dispatch, chronological pallet history and global movement history.
+- Dashboard counts and recent movements, responsive desktop/mobile screens, visible offline/error states and 20-second read refreshes.
+- PostgreSQL transactions, row locking, version checks, nonnegative stock constraints and duplicate operation protection.
+- Four demo products, one warehouse, nine hierarchy/staging locations and three active pallets totaling 180 cartons.
+
+## REST checks with Postman
+
+Use **Basic Auth** and `Content-Type: application/json`. Before POST/PUT requests, GET `/api/v1/auth/csrf`, retain its session cookie, and send the returned token using its `headerName` (Postman cookie jar must be enabled). The frontend handles this automatically. POST `/api/v1/auth/logout` ends the session. Routes below are relative to `/api/v1`.
+
+| Method / route | Purpose |
+|---|---|
+| `GET /auth/me` | Verify credentials and role |
+| `GET /products?search=BOX`, `POST /products`, `PUT /products/{id}` | Catalog; writes require Admin |
+| `GET /warehouses`, `POST /warehouses` | Warehouses; writes require Admin |
+| `GET /locations`, `POST /locations` | Hierarchy with full paths; writes require Admin |
+| `GET /inventory?search=&status=ACTIVE&locationId=&page=0` | Pallets, 25 per page; omit empty optional parameters |
+| `GET /pallets/{id}` | Current pallet and oldest-first history |
+| `POST /receipts` | `{ "productId": 1, "locationId": 1, "quantity": 80, "requestId": "<new UUID>", "reference": "Delivery 123" }` |
+| `POST /transfers` | `{ "palletId": 1, "locationId": 6, "version": 0, "requestId": "<new UUID>" }` |
+| `POST /dispatches` | `{ "palletId": 1, "quantity": 20, "version": 0, "requestId": "<new UUID>" }` |
+| `GET /movements?type=DISPATCH&page=0`, `GET /dashboard` | Global history and live totals |
+
+Use actual product/location IDs from the GET responses. Transfer/dispatch must send the **current pallet version**, returned by receipt, detail and inventory responses. Every command needs a new UUID; reuse that UUID when retrying the same uncertain submission. Already-recorded requests return **409**, without posting a second movement. Refresh after 409 to inspect the saved state. References are optional.
+
+Movement quantities are positive magnitudes: receipt adds, dispatch subtracts, transfer leaves the balance unchanged. `balanceAfter` records the historical remaining cartons. Product details are referenced from the catalog. There are no endpoints to edit/delete movements or directly edit pallet balances.
+
+## Verification and deliberate limits
+
+Frontend production build and backend package build passed. Both servers started against PostgreSQL. A brief REST smoke check through Vite verified 80-carton receiving, partial dispatch to 60, transfer, full dispatch to zero, history, filters, totals, duplicate/stale/overdraw rejection and role restrictions. The completed `PLT-000004` remains as an auditable smoke-check example; the three original demo pallets are unchanged.
+
+Manually verify browser interaction on desktop and phone first, especially the dispatch confirmation and refreshed balance. No automated E2E or extensive test suites were added.
+
+Prototype limits: fixed in-memory accounts, no account-management UI, no password reset, no correction/reversal workflow, no warehouse/location rename or deletion, no interwarehouse transfer, and no offline writes. Basic authentication is for local demonstration; production security is outside this phase. Native PWA installation and offline caching are not implemented. Phase 2 is planned for RFID-assisted warehouse automation; it has not started. No RFID or other hardware integration is included.
