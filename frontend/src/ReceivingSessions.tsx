@@ -48,6 +48,7 @@ export function ReceivingSessionScreen({ id, revision, changed }: Shared & { id:
   const [data, setData] = useState<ReceivingSessionDetail>(); const [error, setError] = useState('');
   const [refresh, setRefresh] = useState(0); const [tab, setTab] = useState<'receive' | 'queue' | 'pallets'>('receive');
   const [moving, setMoving] = useState<Pallet>(); const [completing, setCompleting] = useState(false);
+  const [recentDestinationIds, setRecentDestinationIds] = useState<number[]>([]);
   // Preserve the receiving form and its previous-pallet shortcut while refreshing server-backed progress.
   useEffect(() => {
     let active = true; let inFlight = false;
@@ -76,7 +77,7 @@ export function ReceivingSessionScreen({ id, revision, changed }: Shared & { id:
     </section>}
     <p className="refresh-note mb-5">Ortak kuyruk 10 saniyede bir yenilenir. Diğer operatörler aynı kabul kaydını açabilir.</p>
     {s.status === 'OPEN' && <button className="btn" onClick={() => setCompleting(true)}><CheckCircle2 size={17}/>Mal Kabulü Tamamla</button>}
-    {moving && <Modal title={'Paleti Yerleştir · ' + moving.code} onClose={() => { setMoving(undefined); setRefresh(v => v + 1); }}><OperationForm pallet={moving} type="move" onDone={p => { setMoving(undefined); saved(p.firstPutAwayAt ? p.code + ' rafa yerleştirildi.' : p.code + ' bekleme alanına taşındı; yerleştirme kuyruğunda kalır.'); }}/></Modal>}
+    {moving && <Modal title={'Paleti Yerleştir · ' + moving.code} onClose={() => { setMoving(undefined); setRefresh(v => v + 1); }}><OperationForm pallet={moving} type="move" recentDestinationIds={recentDestinationIds} onDone={p => { if (p.location) { const destinationId = p.location.id; setRecentDestinationIds(ids => [destinationId, ...ids.filter(id => id !== destinationId)].slice(0, 3)); } setMoving(undefined); setTab('queue'); saved(p.firstPutAwayAt ? p.code + ' rafa yerleştirildi.' : p.code + ' bekleme alanına taşındı; yerleştirme kuyruğunda kalır.'); }}/></Modal>}
     {completing && <Modal title="Mal Kabulü Tamamla" onClose={() => setCompleting(false)}><CompleteSessionForm session={s} onDone={() => { setCompleting(false); saved(s.code + ' tamamlandı.'); }}/></Modal>}
   </>;
 }

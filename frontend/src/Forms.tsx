@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ArrowDownToLine, ArrowRightLeft, ArrowUpFromLine } from 'lucide-react';
 import { api, operationId } from './api';
@@ -30,10 +30,11 @@ export function ReceiveForm({ onDone }: { onDone: (p: Pallet) => void }) {
   </form>;
 }
 
-export function OperationForm({ pallet, type, onDone }: { pallet: Pallet; type: 'move' | 'dispatch'; onDone: (p: Pallet) => void }) {
+export function OperationForm({ pallet, type, onDone, recentDestinationIds = [] }: { pallet: Pallet; type: 'move' | 'dispatch'; onDone: (p: Pallet) => void; recentDestinationIds?: number[] }) {
   const locations = useLoad<Location[]>('/locations'); const online = useOnline();
   const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const [requestId] = useState(operationId);
   const [quantity, setQuantity] = useState('');
+  const destinationRef = useRef<HTMLSelectElement>(null);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); const form = new FormData(e.currentTarget); setBusy(true); setError('');
     try { onDone(await api<Pallet>(type === 'move' ? '/transfers' : '/dispatches', 'POST', {
@@ -42,9 +43,16 @@ export function OperationForm({ pallet, type, onDone }: { pallet: Pallet; type: 
     })); } catch(e) { setError(message(e)); } finally { setBusy(false); }
   }
   const destinations = (locations.data || []).filter(l => l.selectable && l.id !== pallet.location?.id && l.warehouseId === pallet.location?.warehouseId);
+  const recentDestinations = recentDestinationIds.slice(0, 3).map(id => destinations.find(l => l.id === id)).filter((l): l is Location => !!l);
+  function selectDestination(id: number) {
+    const field = destinationRef.current;
+    if (!field) return;
+    field.value = String(id); field.setCustomValidity(''); field.focus();
+  }
   return <form onSubmit={submit} className="form-stack"><ErrorBox>{error || (type === 'move' ? locations.error : '')}</ErrorBox>
     <div className="operation-summary"><strong>{pallet.code} · {pallet.productName}</strong><span>Mevcut: {number(pallet.quantity)} koli</span><small>{pallet.location?.path}</small></div>
-    {type === 'move' ? <Field label="Hedef Raf Gözü veya Bekleme Alanı"><select name="locationId" required defaultValue=""><option value="" disabled>Hedef konum seçin</option>{destinations.map(l => <option key={l.id} value={l.id}>{l.path}</option>)}</select></Field> : <>
+    {type === 'move' && recentDestinations.length > 0 && <div className="operation-summary"><span>Son Kullanılan Konumlar</span><div className="actions wrap">{recentDestinations.map(l => <button key={l.id} type="button" className="btn secondary small" disabled={busy || !online} title={l.path} onClick={() => selectDestination(l.id)}><span>{l.id === recentDestinationIds[0] ? <>Önceki Konuma Yerleştir<br/></> : null}{l.code}</span></button>)}</div><small>Konumu seçer. İşlemi kaydetmek için Taşımayı Onayla düğmesine basın.</small></div>}
+    {type === 'move' ? <Field label="Hedef Raf Gözü veya Bekleme Alanı"><select ref={destinationRef} name="locationId" required defaultValue=""><option value="" disabled>Hedef konum seçin</option>{destinations.map(l => <option key={l.id} value={l.id}>{l.path}</option>)}</select></Field> : <>
       <Field label="Çıkış Yapılacak Koli Miktarı"><input name="quantity" value={quantity} onChange={e => setQuantity(e.target.value)} type="number" min="1" max={pallet.quantity} step="1" inputMode="numeric" required autoFocus/></Field>
       <button type="button" className="text-button self-start" onClick={e => { const field = e.currentTarget.form?.elements.namedItem('quantity'); if (field instanceof HTMLInputElement) field.setCustomValidity(''); setQuantity(String(pallet.quantity)); }}>Tamamını seç ({number(pallet.quantity)} koli)</button>
       {Number(quantity) > 0 && Number(quantity) <= pallet.quantity && <div className="info-box">{Number(quantity) === pallet.quantity ? 'Tam çıkış: Palet sevk edildi olarak işaretlenecek ve mevcut konumu kaldırılacak.' : `Mevcut konumda ${number(pallet.quantity - Number(quantity))} koli kalacak.`}</div>}
