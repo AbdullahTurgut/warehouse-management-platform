@@ -37,3 +37,4 @@ postgres-data/
 dist/
 target/
 *.tsbuildinfo
+backend/src/main/resources/static/

@@ -149,4 +149,12 @@ The active pallet safety is strict:
 - If network uncertainty occurs (e.g., `Sunucudan onay alınamadı`), the frontend leverages the new idempotent recovery endpoint `GET /api/v1/operations/{requestId}` to resolve the actual committed state rather than guessing. 
 - "Aktif Yerleştirmeyi İptal Et" abandons the UI context without affecting the received pallet in the DB.
 
-Phase 2A.4 external pallet identifiers not started; camera scanning not started; no RFID integration.
+## Phase 2A.3.1 — Local Warehouse Pilot Mode
+
+To run a true multi-device pilot test without cloud infrastructure, the app can be packaged as a single deployable `.jar` that serves both the API and the React SPA on `http://<HOST-LAN-IP>:8080/`.
+
+- Build and start using `scripts/Build-Pilot.ps1` and `scripts/Start-Pilot.ps1`.
+- Ensure PostgreSQL is safely isolated (`127.0.0.1:5432`) and Windows Defender Firewall allows incoming TCP 8080 traffic on Private networks.
+- Connect mobile/tablet devices to the same local network to log in concurrently and verify live two-device receiving and put-away flows.
+
+*Phase 2A.4 external pallet identifiers not started; camera scanning not started; no RFID integration.*

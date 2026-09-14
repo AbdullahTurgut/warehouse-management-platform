@@ -34,4 +34,11 @@ Phase 2A.2 is complete. Phase 2A.3 camera scanning has not started. RFID-assiste
 - Added "Kaydet ve Yerleştir" for same-operator rack-only placement with zero pallet scans in an uninterrupted controlled flow.
 - Active pallet identity is temporarily stored in UI state (clears on reload, navigation, 5 minutes idle, conflicting states, or explicitly via "İptal Et").
 - Network uncertainty handled correctly using a new `GET /api/v1/operations/{requestId}` idempotent recovery endpoint.
+
+## Phase 2A.3.1 — Complete
+- Local Warehouse Pilot Mode completed.
+- React production frontend served directly by Spring Boot from `static` resources (same-origin).
+- Admin/desktop and Operator/mobile access live data over same Wi-Fi/LAN via `http://<HOST-LAN-IP>:8080/`.
+- PostgreSQL remains local/private (`127.0.0.1`). 
+- Uninterrupted two-device receipt/placement flow verified.
 - Phase 2A.4 external pallet identifiers not started; camera scanning not started; no RFID integration.

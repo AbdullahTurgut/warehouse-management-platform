@@ -30,7 +30,7 @@ public class SecurityConfig {
         return http.csrf(csrf -> csrf.csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/error").permitAll()
+                .requestMatchers("/error", "/", "/index.html", "/assets/**", "/favicon.ico", "/manifest.json").permitAll()
                 .requestMatchers(HttpMethod.GET,"/api/v1/auth/csrf").permitAll()
                 .requestMatchers(HttpMethod.POST,"/api/v1/products","/api/v1/locations","/api/v1/warehouses").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT,"/api/v1/products/**").hasRole("ADMIN")
