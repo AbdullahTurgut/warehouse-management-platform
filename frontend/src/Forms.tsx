@@ -71,7 +71,7 @@ export function OperationForm({ pallet, type, onDone, recentDestinationIds = [],
   }
   return <form onSubmit={submit} className="form-stack"><ErrorBox>{error || (type === 'move' ? locations.error : '')}</ErrorBox>
     <div className="operation-summary"><strong>{pallet.code} · {pallet.productName}</strong><small>SKU: {pallet.sku}</small><span>Mevcut: {number(pallet.quantity)} koli</span><small>{pallet.location?.path}</small></div>
-    {type === 'move' && scanDestination && <ScanInput label="2. Konum Kodunu Okutun veya Yazın" placeholder="LOC-42" disabled={busy} onStart={() => setDestinationId('')} onScan={result => {
+    {type === 'move' && scanDestination && <ScanInput label="2. Konum Kodunu Okutun veya Yazın" placeholder="LOC-42" disabled={busy} cameraScannerType="LOCATION" onStart={() => setDestinationId('')} onScan={result => {
       if (result.type !== 'LOCATION') throw new Error('Konum kodu bekleniyor. Palet yerine LOC-… etiketini okutun.');
       const l = result.location;
       if (!l.active) throw new Error('Bu konum aktif değil.');

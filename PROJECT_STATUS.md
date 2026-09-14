@@ -38,7 +38,13 @@ Phase 2A.2 is complete. Phase 2A.3 camera scanning has not started. RFID-assiste
 ## Phase 2A.3.1 — Complete
 - Local Warehouse Pilot Mode completed.
 - React production frontend served directly by Spring Boot from `static` resources (same-origin).
-- Admin/desktop and Operator/mobile access live data over same Wi-Fi/LAN via `http://<HOST-LAN-IP>:8080/`.
+- Admin/desktop and Operator/mobile access live data over same Wi-Fi/LAN via `https://<HOST-LAN-IP>:8080/`.
 - PostgreSQL remains local/private (`127.0.0.1`). 
 - Uninterrupted two-device receipt/placement flow verified.
-- Phase 2A.4 external pallet identifiers not started; camera scanning not started; no RFID integration.
+
+## Phase 2A.3.2 — Complete
+- Mobile Location QR Scanning completed using phone camera (for permanent LOC-<id> labels only).
+- HTTPS LAN pilot established with a local Root CA to satisfy mobile secure context requirements.
+- Desktop Admin + mobile Operator shared-data pilot verified.
+- First warehouse field test is the next step.
+- Phase 2A.4 external pallet identifiers not started; camera scanning for pallets not started; no RFID integration.

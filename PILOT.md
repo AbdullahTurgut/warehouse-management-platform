@@ -39,12 +39,22 @@ This pilot mode configuration runs the complete Warehouse Management Platform (R
 3. **Obtain Host LAN IP**:
    Find the correct LAN IPv4 address (e.g. `192.168.1.50`). The startup script will display candidates.
 4. **Start Pilot**:
-   Run `scripts/Start-Pilot.ps1`.
+   Run `scripts/Start-Pilot.ps1`. This will automatically generate a local Root CA (`pilot-ca.cer`) and a server certificate (`pilot-keystore.p12`) signed by that CA to enable camera access.
 5. **Connect Mobile Device**:
    Ensure the phone/tablet is connected to the **exact same Wi-Fi network**.
-6. **Open Mobile Browser**:
-   Navigate to `http://<HOST-LAN-IP>:8080/`.
-7. **Verify Login**:
+6. **Certificate Trust (Crucial for Camera Access)**:
+   - Mobile browsers strictly require HTTPS to allow camera access for the QR scanner.
+   - You must install the generated `pilot-ca.cer` on your testing devices.
+   - **Android**: Transfer `pilot-ca.cer` to the phone. Go to Settings -> Security -> Install from storage -> CA Certificate and install it.
+   - **iOS**: You MUST install and explicitly trust the Root CA. 
+     1. AirDrop or Email `pilot-ca.cer` to the iPhone.
+     2. Tap the file to download the profile.
+     3. Go to Settings -> "Profile Downloaded" -> Install.
+     4. Go to Settings -> General -> About -> Certificate Trust Settings and toggle **Enable Full Trust for Root Certificates** ON for `WarehousePilotRootCA`.
+   - *Note: The server certificate is automatically regenerated if your host LAN IP changes, but you do NOT need to reinstall the Root CA on your phone!*
+7. **Open Mobile Browser**:
+   Navigate to `https://<HOST-LAN-IP>:8080/`. Make sure to type `https://`.
+8. **Verify Login**:
    Sign in as `operator` / `operator123`.
 8. **Test Flow**:
    - Open **Mal Kabul Kayıtları → Mal Kabul Kaydı Aç**.

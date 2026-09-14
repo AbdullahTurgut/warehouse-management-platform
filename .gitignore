@@ -19,6 +19,8 @@ credentials/
 *.pfx
 *.jks
 *.keystore
+*.cer
+*.crt
 .DS_Store
 Thumbs.db
 Desktop.ini
