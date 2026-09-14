@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
@@ -39,4 +40,5 @@ public class InventoryController {
     @PostMapping("/receipts") public PalletView receive(@Valid @RequestBody ReceiptInput input, Principal principal) { return service.receive(input,principal.getName()); }
     @PostMapping("/transfers") public PalletView transfer(@Valid @RequestBody TransferInput input, Principal principal) { return service.transfer(input,principal.getName()); }
     @PostMapping("/dispatches") public PalletView dispatch(@Valid @RequestBody DispatchInput input, Principal principal) { return service.dispatch(input,principal.getName()); }
+    @GetMapping("/operations/{requestId}") public PalletView operationPallet(@PathVariable UUID requestId) { return service.operationPallet(requestId); }
 }

@@ -36,6 +36,7 @@ interface ReceivingSessions extends JpaRepository<ReceivingSession, Long>, JpaSp
 }
 interface Movements extends JpaRepository<StockMovement, Long>, JpaSpecificationExecutor<StockMovement> {
     boolean existsByRequestId(UUID requestId);
+    Optional<StockMovement> findByRequestId(UUID requestId);
     List<StockMovement> findByPalletIdOrderByCreatedAtAscIdAsc(Long palletId);
     List<StockMovement> findTop8ByOrderByCreatedAtDescIdDesc();
 }

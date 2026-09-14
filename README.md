@@ -110,7 +110,7 @@ Frontend production build and backend package build passed. Both servers started
 
 Manually verify browser interaction on desktop and phone first, especially the dispatch confirmation and refreshed balance. No automated E2E or extensive test suites were added.
 
-Prototype limits: fixed in-memory accounts, no account-management UI, no password reset, no correction/reversal workflow, no warehouse/location rename or deletion, no interwarehouse transfer, and no offline writes. Basic authentication is for local demonstration; production security is outside this phase. Native PWA installation and offline caching are not implemented. Milestone 2A.1 is complete. Milestone 2A.2 adds labels and HID scanning; 2A.3 has not started; RFID-assisted automation remains a later pilot. No hardware integration is included.
+Prototype limits: fixed in-memory accounts, no account-management UI, no password reset, no correction/reversal workflow, no warehouse/location rename or deletion, no interwarehouse transfer, and no offline writes. Basic authentication is for local demonstration; production security is outside this phase. Native PWA installation and offline caching are not implemented. Milestone 2A.1 is complete. Milestone 2A.2 adds labels and HID scanning; 2A.3 is complete (same-operator continuity). Phase 2A.4 and RFID-assisted automation remain later pilots. No hardware integration is included.
 
 ## Milestone 2A.1 — completed: software-only continuous receiving
 
@@ -135,3 +135,18 @@ In a receiving record, open **Hızlı Yerleştirme**. Scan/type the exact pallet
 **Etiket Yazdır** is available after receiving, on pallet details/received-pallet rows and on selectable locations. Warehouse headings print all currently filtered valid location labels. The preview offers **Yazdır / PDF Kaydet**. QR and Code 128 encode the same identity; reprints fetch current pallet details without writing stock. Printed carton quantities are a snapshot. Allow the label popup, print at actual size, and verify readability on the intended printer/scanner. Libraries: [node-qrcode](https://github.com/soldair/node-qrcode), [JsBarcode](https://github.com/lindell/JsBarcode).
 
 Frontend/backend builds and a short PostgreSQL API check passed (exact lookup, unknown codes without movements, transfer/progress/history, stale version rejection). The marked smoke record is MK-000004 / PLT-000043. Physical scanner/print acceptance remains manual. Configure HID suffix Enter and matching keyboard layout. No camera, RFID, offline scanning or 2A.3 work is included.
+
+## Phase 2A.3 — same-operator rack-only continuity
+
+Open **Mal Kabul Kayıtları → Mal Kabul Kaydı Aç**. Under "Kesintisiz Palet Girişi", choose the product and quantity, and press **Kaydet ve Yerleştir**.
+The exact newly created pallet immediately takes over the UI context as the active placement pallet. The form is hidden, and you are prompted to physically take the pallet and place it on a shelf. 
+Scan/type only a valid destination `LOC-<id>` + Enter (without scanning the pallet barcode), check the summary, and press **Taşımayı Onayla**. 
+Success clears the active pallet and automatically brings back the receiving form ready for the next product.
+
+The active pallet safety is strict:
+- The identity clears completely if the page is reloaded, navigated away from, or the device is locked (using `visibilitychange`).
+- A strict 5-minute inactivity timer cancels the active placement context, leaving the untouched pallet safely in the shared queue.
+- If network uncertainty occurs (e.g., `Sunucudan onay alınamadı`), the frontend leverages the new idempotent recovery endpoint `GET /api/v1/operations/{requestId}` to resolve the actual committed state rather than guessing. 
+- "Aktif Yerleştirmeyi İptal Et" abandons the UI context without affecting the received pallet in the DB.
+
+Phase 2A.4 external pallet identifiers not started; camera scanning not started; no RFID integration.

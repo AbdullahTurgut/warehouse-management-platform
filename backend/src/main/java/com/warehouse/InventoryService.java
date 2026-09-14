@@ -199,4 +199,7 @@ public class InventoryService {
         movement(p,StockMovement.Type.DISPATCH,input.quantity(),source,null,input.requestId(),input.reference(),actor);
         em.flush(); return palletView(p);
     }
+    public PalletView operationPallet(UUID requestId) {
+        return movements.findByRequestId(requestId).map(m -> palletView(m.pallet)).orElseThrow(() -> missing("Operation"));
+    }
 }

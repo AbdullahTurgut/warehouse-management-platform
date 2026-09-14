@@ -14,8 +14,17 @@ export function ReceiveForm({ onDone }: { onDone: (p: Pallet) => void }) {
   const [requestId] = useState(operationId); const online = useOnline();
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); const form = new FormData(e.currentTarget); setBusy(true); setError('');
-    try { onDone(await api<Pallet>('/receipts', 'POST', { productId: Number(form.get('productId')), locationId: Number(form.get('locationId')), quantity: Number(form.get('quantity')), reference: form.get('reference'), requestId })); }
-    catch(e) { setError(message(e)); } finally { setBusy(false); }
+    const currentRequestId = requestId;
+    try { onDone(await api<Pallet>('/receipts', 'POST', { productId: Number(form.get('productId')), locationId: Number(form.get('locationId')), quantity: Number(form.get('quantity')), reference: form.get('reference'), requestId: currentRequestId })); }
+    catch(err: any) {
+      if (err.message.includes('Sunucudan onay alınamadı')) {
+        try {
+          onDone(await api<Pallet>('/operations/' + currentRequestId));
+          return;
+        } catch {}
+      }
+      setError(message(err));
+    } finally { setBusy(false); }
   }
   if (products.loading || locations.loading) return <Loading/>;
   const options = locations.data?.filter(l => l.selectable) || [];
@@ -39,10 +48,19 @@ export function OperationForm({ pallet, type, onDone, recentDestinationIds = [],
   const [destinationId, setDestinationId] = useState('');
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); const form = new FormData(e.currentTarget); setBusy(true); setError('');
+    const currentRequestId = requestId;
     try { onDone(await api<Pallet>(type === 'move' ? '/transfers' : '/dispatches', 'POST', {
-      palletId: pallet.id, version: pallet.version, requestId, reference: form.get('reference'),
+      palletId: pallet.id, version: pallet.version, requestId: currentRequestId, reference: form.get('reference'),
       ...(type === 'move' ? { locationId: Number(form.get('locationId')) } : { quantity: Number(quantity) }),
-    })); } catch(e) { setError(message(e)); } finally { setBusy(false); }
+    })); } catch(err: any) {
+      if (err.message.includes('Sunucudan onay alınamadı')) {
+        try {
+          onDone(await api<Pallet>('/operations/' + currentRequestId));
+          return;
+        } catch {}
+      }
+      setError(message(err));
+    } finally { setBusy(false); }
   }
   const destinations = (locations.data || []).filter(l => l.selectable && l.id !== pallet.location?.id && l.warehouseId === pallet.location?.warehouseId);
   const recentDestinations = recentDestinationIds.slice(0, 3).map(id => destinations.find(l => l.id === id)).filter((l): l is Location => !!l);

@@ -29,4 +29,9 @@ Phase 2A.2 is complete. Phase 2A.3 camera scanning has not started. RFID-assiste
 - Pallet/location QR + Code 128 label printing completed, including read-only reprinting and filtered location batch printing.
 - Existing manual flow, shared queue, counters and recent destination shortcuts retained.
 - Frontend/backend builds and brief PostgreSQL API verification passed. Physical HID scanner and printer have not yet been validated.
-- Phase 2A.3 camera scanning not started; no RFID integration.
+
+## Phase 2A.3 — Complete
+- Added "Kaydet ve Yerleştir" for same-operator rack-only placement with zero pallet scans in an uninterrupted controlled flow.
+- Active pallet identity is temporarily stored in UI state (clears on reload, navigation, 5 minutes idle, conflicting states, or explicitly via "İptal Et").
+- Network uncertainty handled correctly using a new `GET /api/v1/operations/{requestId}` idempotent recovery endpoint.
+- Phase 2A.4 external pallet identifiers not started; camera scanning not started; no RFID integration.
